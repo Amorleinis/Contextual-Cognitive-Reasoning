@@ -1,0 +1,63 @@
+version: "3.9"
+
+services:
+  ccria:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ccria_service
+    env_file:
+      - contextual_reasoning_ai/.env
+    depends_on:
+      - neo4j
+      - redis
+    ports:
+      - "8000:8000"   # API port
+    volumes:
+      - ./contextual_reasoning_ai:/app/contextual_reasoning_ai
+    restart: unless-stopped
+    networks:
+      - ccria_network
+
+  neo4j:
+    image: neo4j:5.22
+    container_name: neo4j_db
+    environment:
+      - NEO4J_AUTH=neo4j/securepassword
+    ports:
+      - "7474:7474"   # Neo4j HTTP UI
+      - "7687:7687"   # Neo4j Bolt protocol
+    volumes:
+      - ./db/neo4j_data:/data
+      - ./contextual_reasoning_ai/db/init_neo4j.cql:/init/init_neo4j.cql
+    command: >
+      bash -c "
+        neo4j start
+      "
+    restart: unless-stopped
+    networks:
+      - ccria_network
+
+  redis:
+    image: redis:7.4
+    container_name: redis_memory
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+    networks:
+      - ccria_network
+
+volumes:
+  redis_data:
+
+networks:
+  ccria_network:
+    driver: bridge
+    name: ccria_network
+    ipam:
+      driver: default
+      config:
+        - subnet:
+        
